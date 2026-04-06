@@ -1,20 +1,33 @@
 import gspread
-from datetime import datetime
 import streamlit as st
+from datetime import datetime
+import os
 
 # =============================
 # CONFIG GOOGLE SHEETS
 # =============================
-gc = gspread.service_account_from_dict(st.secrets["gcp_service_account"])
-
 PLANILHA_ID = "1uLXKsjRVk_2QqV3couSAnLvmiYq4uI1DKwEqxn_8bqo"
+
+def conectar_google():
+    # Se estiver no Streamlit Cloud (secrets)
+    try:
+        if "gcp_service_account" in st.secrets:
+            return gspread.service_account_from_dict(st.secrets["gcp_service_account"])
+    except:
+        pass
+
+    # rodando local com credenciais.json
+    if os.path.exists("credenciais.json"):
+        return gspread.service_account(filename="credenciais.json")
+
+    raise Exception("Nenhuma credencial encontrada: configure secrets.toml ou credenciais.json")
+
+gc = conectar_google()
 sh = gc.open_by_key(PLANILHA_ID)
-
-ws = sh.sheet1  # primeira aba
-
+ws = sh.sheet1
 # =============================
-# FUNÇÕES AUXILIARES
-# =============================
+# FUNÇÕES AUXILIARES  
+# # =============================
 def proxima_linha_vazia():
     valores = ws.col_values(2)  # coluna B (PLACA)
     return len(valores) + 1
@@ -294,3 +307,54 @@ def contar_por_periodo(data_inicio, data_fim):
             continue
 
     return len(placas_total), len(placas_manut), len(placas_final)
+def os_por_executor_periodo(data_inicio, data_fim):
+    linhas = ler_tabela()
+
+    contagem = {}
+
+    for row in linhas:
+        try:
+            while len(row) < 19:
+                row.append("")
+
+            data_entrada = row[7].strip()  # H
+            status = row[11].strip().upper()
+            exec1 = row[15].strip()        # P
+            exec2 = row[18].strip()        # S
+
+            if data_entrada == "":
+                continue
+
+            try:
+                data_os = datetime.strptime(data_entrada, "%d/%m/%Y").date()
+            except:
+                continue
+
+            if data_os < data_inicio or data_os > data_fim:
+                continue
+
+            if status not in ["EM MANUTENCAO", "OK", "FINALIZADO"]:
+                continue
+
+            if exec1 != "":
+                contagem[exec1] = contagem.get(exec1, 0) + 1
+
+            if exec2 != "":
+                contagem[exec2] = contagem.get(exec2, 0) + 1
+
+        except:
+            continue
+
+    return contagem
+def salvar_borracharia(id_os, qtd_movimento, valor):
+    linha = buscar_linha_por_id(id_os)
+
+    if linha is None:
+        print("ERRO: ID não encontrado:", id_os)
+        return
+
+    # Coluna C = 3 (Qtd Movimento Pneus)
+    ws.update_cell(linha, 3, qtd_movimento)
+
+    # Coluna Q = 17 (Valor)
+    ws.update_cell(linha, 17, valor)

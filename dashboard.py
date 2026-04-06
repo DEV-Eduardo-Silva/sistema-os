@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime
 import bd
+import matplotlib.pyplot as plt
 from streamlit_autorefresh import st_autorefresh
 
 # =========================
@@ -74,7 +75,7 @@ def tela_dashboard():
         data_fim = st.date_input("Data fim", datetime.today())
 
     # =========================
-    # KPI POR PERÍODO (AGORA MUDA COM O FILTRO)
+    # KPI POR PERÍODO
     # =========================
     total, manut, final = bd.contar_por_periodo(data_inicio, data_fim)
 
@@ -84,6 +85,39 @@ def tela_dashboard():
     c3.metric("PLACAS FINALIZADAS", final)
 
     st.divider()
+
+    # =========================
+    # EXPANDER - GRÁFICO EXECUTORES
+    # =========================
+    with st.expander("📊 OS por Executor (clique para abrir)", expanded=False):
+
+        contagem = bd.os_por_executor_periodo(data_inicio, data_fim)
+
+        # remover executor MATERIAL
+        contagem = {k: v for k, v in contagem.items() if k.strip().upper() != "MATERIAL"}
+
+        if len(contagem) == 0:
+            st.info("Nenhuma OS encontrada no período.")
+        else:
+            contagem_ordenada = dict(sorted(contagem.items(), key=lambda x: x[1], reverse=True))
+
+            executores = list(contagem_ordenada.keys())
+            valores = list(contagem_ordenada.values())
+
+            fig, ax = plt.subplots(figsize=(10, 4))
+            ax.bar(executores, valores)
+
+            ax.set_ylabel("Quantidade de OS")
+            ax.set_xlabel("Executor")
+            ax.set_title("Total de OS por Executor")
+
+            plt.xticks(rotation=0)
+
+            # mostrar valores em cima das barras
+            for i, v in enumerate(valores):
+                ax.text(i, v + 0.1, str(v), ha='center', fontweight='bold')
+
+            st.pyplot(fig)
 
     # =========================
     # OS AGRUPADAS (EM MANUTENÇÃO)
@@ -139,7 +173,7 @@ def tela_dashboard():
             setores["BORRACHARIA"].append(os)
 
     # =========================
-    # LAYOUT
+    # LAYOUT 
     # =========================
     col1, col2, col3 = st.columns(3)
 

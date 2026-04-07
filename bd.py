@@ -214,24 +214,20 @@ def finalizar_os(id_os, data_saida, hora_saida, mao1, mao2, total_exec1, total_e
         print("ERRO: ID não encontrado:", id_os)
         return
 
-    # STATUS FINALIZADA (L = 12)
+    # STATUS FINALIZADA
     ws.update_cell(linha, 12, "FINALIZADO")
 
-    # DATA SAÍDA (J = 10)
-    ws.update_cell(linha, 10, data_saida)
-
-    # HORA SAÍDA (K = 11)
-    ws.update_cell(linha, 11, hora_saida)
+    # DATA / HORA SAIDA
+    ws.update_cell(linha, 10, data_saida)  # J
+    ws.update_cell(linha, 11, hora_saida)  # K
 
     # EXECUTOR 1
-    ws.update_cell(linha, 13, mao1)         # M = Tempo mão de obra
-    ws.update_cell(linha, 18, total_exec1)  # R = Hora final (entrada + mao1)
+    ws.update_cell(linha, 13, mao1)        # M
+    ws.update_cell(linha, 18, total_exec1) # R
 
     # EXECUTOR 2
-    ws.update_cell(linha, 20, mao2)         # T = Tempo mão de obra 2
-    ws.update_cell(linha, 21, total_exec2)  # U = Hora final (entrada + mao2)
-
-
+    ws.update_cell(linha, 20, mao2)        # T
+    ws.update_cell(linha, 21, total_exec2) # U
 # =============================
 # KPI POR PLACA (GERAL)
 # =============================
@@ -353,9 +349,11 @@ def salvar_borracharia(id_os, qtd_movimento, valor):
         print("ERRO: ID não encontrado:", id_os)
         return
 
-    # Coluna C = 3 (Qtd Movimento Pneus)
-    ws.update_cell(linha, 3, qtd_movimento)
+    # COLUNA C = QTD MOVIMENTO
+    if qtd_movimento:
+        ws.update_cell(linha, 3, qtd_movimento)
 
-    # Coluna Q = 17 (Valor)
-    ws.update_cell(linha, 17, valor)
+    # COLUNA Q = VALOR
+    if valor:
+        ws.update_cell(linha, 17, valor)
     

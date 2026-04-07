@@ -3,14 +3,24 @@ from datetime import datetime
 import bd
 import matplotlib.pyplot as plt
 from streamlit_autorefresh import st_autorefresh
+import pytz
 
 # =========================
-# TEMPO
+# TEMPO (COM FUSO CORRETO)
 # =========================
 def calcular_tempo(data_str, hora_str):
     try:
-        dt = datetime.strptime(f"{data_str} {hora_str}", "%d/%m/%Y %H:%M")
-        diff = datetime.now() - dt
+        fuso = pytz.timezone("America/Sao_Paulo")
+
+        dt = datetime.strptime(
+            f"{data_str} {hora_str}",
+            "%d/%m/%Y %H:%M"
+        )
+
+        dt = fuso.localize(dt)
+        agora = datetime.now(fuso)
+
+        diff = agora - dt
 
         total_min = int(diff.total_seconds() / 60)
         horas = total_min // 60
@@ -40,7 +50,10 @@ def card_setor(titulo, lista_os=None):
     """, unsafe_allow_html=True)
 
     for os in lista_os:
-        tempo = calcular_tempo(os.get("DATA_ENTRADA", ""), os.get("HORA_ENTRADA", ""))
+        tempo = calcular_tempo(
+            os.get("DATA_ENTRADA", ""),
+            os.get("HORA_ENTRADA", "")
+        )
 
         st.markdown(f"""
         🚗 <b>Placa:</b> {os.get('PLACA','')}<br>
@@ -64,22 +77,32 @@ def tela_dashboard():
     st_autorefresh(interval=30000, key="dash_refresh")
 
     # =========================
-    # FILTRO DE DATA
+    # FILTRO DATA
     # =========================
     colf1, colf2 = st.columns(2)
 
     with colf1:
-        data_inicio = st.date_input("Data início", datetime.today())
+        data_inicio = st.date_input(
+            "Data início",
+            datetime.today()
+        )
 
     with colf2:
-        data_fim = st.date_input("Data fim", datetime.today())
+        data_fim = st.date_input(
+            "Data fim",
+            datetime.today()
+        )
 
     # =========================
-    # KPI POR PERÍODO
+    # KPI
     # =========================
-    total, manut, final = bd.contar_por_periodo(data_inicio, data_fim)
+    total, manut, final = bd.contar_por_periodo(
+        data_inicio,
+        data_fim
+    )
 
     c1, c2, c3 = st.columns(3)
+
     c1.metric("TOTAL PLACAS NO PERÍODO", total)
     c2.metric("PLACAS EM MANUTENÇÃO", manut)
     c3.metric("PLACAS FINALIZADAS", final)
@@ -87,19 +110,34 @@ def tela_dashboard():
     st.divider()
 
     # =========================
-    # EXPANDER - GRÁFICO EXECUTORES
+    # GRÁFICO EXECUTORES
     # =========================
-    with st.expander("📊 OS por Executor (clique para abrir)", expanded=False):
+    with st.expander(
+        "📊 OS por Executor (clique para abrir)",
+        expanded=False
+    ):
 
-        contagem = bd.os_por_executor_periodo(data_inicio, data_fim)
+        contagem = bd.os_por_executor_periodo(
+            data_inicio,
+            data_fim
+        )
 
-        # remover executor MATERIAL
-        contagem = {k: v for k, v in contagem.items() if k.strip().upper() != "MATERIAL"}
+        contagem = {
+            k: v for k, v in contagem.items()
+            if k.strip().upper() != "MATERIAL"
+        }
 
         if len(contagem) == 0:
             st.info("Nenhuma OS encontrada no período.")
+
         else:
-            contagem_ordenada = dict(sorted(contagem.items(), key=lambda x: x[1], reverse=True))
+            contagem_ordenada = dict(
+                sorted(
+                    contagem.items(),
+                    key=lambda x: x[1],
+                    reverse=True
+                )
+            )
 
             executores = list(contagem_ordenada.keys())
             valores = list(contagem_ordenada.values())
@@ -113,17 +151,21 @@ def tela_dashboard():
 
             plt.xticks(rotation=0)
 
-            # mostrar valores em cima das barras
             for i, v in enumerate(valores):
-                ax.text(i, v + 0.1, str(v), ha='center', fontweight='bold')
+                ax.text(
+                    i,
+                    v + 0.1,
+                    str(v),
+                    ha='center',
+                    fontweight='bold'
+                )
 
             st.pyplot(fig)
 
     # =========================
-    # OS AGRUPADAS (EM MANUTENÇÃO)
+    # OS AGRUPADAS
     # =========================
     os_agrupadas = bd.listar_os_agrupadas()
-
     os_filtradas = []
 
     for os in os_agrupadas:
@@ -133,7 +175,10 @@ def tela_dashboard():
             continue
 
         try:
-            data_os = datetime.strptime(data_str, "%d/%m/%Y").date()
+            data_os = datetime.strptime(
+                data_str,
+                "%d/%m/%Y"
+            ).date()
         except:
             continue
 
@@ -154,6 +199,7 @@ def tela_dashboard():
     }
 
     for os in os_filtradas:
+
         rampa = os.get("RAMPA", "").upper()
         tipo = os.get("TIPO", "").upper()
 
@@ -173,7 +219,7 @@ def tela_dashboard():
             setores["BORRACHARIA"].append(os)
 
     # =========================
-    # LAYOUT 
+    # LAYOUT
     # =========================
     col1, col2, col3 = st.columns(3)
 

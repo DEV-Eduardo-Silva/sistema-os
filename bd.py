@@ -214,7 +214,7 @@ def finalizar_os(id_os, data_saida, hora_saida, mao1, mao2, total_exec1, total_e
         print("ERRO: ID não encontrado:", id_os)
         return
 
-    # STATUS FINAL (L = 12)
+    # STATUS FINALIZADA (L = 12)
     ws.update_cell(linha, 12, "FINALIZADO")
 
     # DATA SAÍDA (J = 10)
@@ -224,12 +224,12 @@ def finalizar_os(id_os, data_saida, hora_saida, mao1, mao2, total_exec1, total_e
     ws.update_cell(linha, 11, hora_saida)
 
     # EXECUTOR 1
-    ws.update_cell(linha, 13, mao1)        # M
-    ws.update_cell(linha, 18, total_exec1) # R
+    ws.update_cell(linha, 13, mao1)         # M = Tempo mão de obra
+    ws.update_cell(linha, 18, total_exec1)  # R = Hora final (entrada + mao1)
 
     # EXECUTOR 2
-    ws.update_cell(linha, 20, mao2)        # T
-    ws.update_cell(linha, 21, total_exec2) # U
+    ws.update_cell(linha, 20, mao2)         # T = Tempo mão de obra 2
+    ws.update_cell(linha, 21, total_exec2)  # U = Hora final (entrada + mao2)
 
 
 # =============================
@@ -358,3 +358,4 @@ def salvar_borracharia(id_os, qtd_movimento, valor):
 
     # Coluna Q = 17 (Valor)
     ws.update_cell(linha, 17, valor)
+    

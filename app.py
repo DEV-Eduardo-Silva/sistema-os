@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import uuid
 import bd
 import dashboard
+import pytz
 
 # =============================
 # FUNÇÃO PARA SOMAR HORAS
@@ -99,8 +100,9 @@ if menu == "Abrir OS":
             st.success("✅ OS criada com sucesso!")
             st.rerun()
 
+
 # =============================
-# OS EM ANDAMENTO  
+# OS EM ANDAMENTO
 # =============================
 elif menu == "OS em andamento":
     st.subheader("📋 OS em Manutenção")
@@ -173,10 +175,13 @@ elif menu == "OS em andamento":
                 mao1 = st.text_input(f"Tempo Mão de Obra - {executor1_nome} (hh:mm)", key=f"mao1_{i}")
                 mao2 = st.text_input(f"Tempo Mão de Obra - {executor2_nome} (hh:mm)", key=f"mao2_{i}")
 
+                # =============================
+                # BORRACHARIA (C e Q)
+                # =============================
                 valor_borracharia = ""
                 qtd_movimento = ""
 
-                if row["TIPO"].strip().upper() == "BORRACHARIA":
+                if "BORR" in row["TIPO"].strip().upper():
                     st.divider()
                     st.markdown("### 🛞 Dados Borracharia")
 
@@ -188,6 +193,9 @@ elif menu == "OS em andamento":
                     with colx2:
                         qtd_movimento = st.text_input("Qtd Movimento de Pneus", key=f"qtd_mov_{i}")
 
+                # =============================
+                # BOTÃO FINALIZAR
+                # =============================
                 if st.button("🚀 Confirmar Finalização", key=f"confirmar_final_{i}"):
 
                     if not validar_hhmm(mao1):
@@ -197,6 +205,10 @@ elif menu == "OS em andamento":
                     else:
                         total_exec1 = somar_hora(row["HORA_ENTRADA"], mao1) if mao1 else ""
                         total_exec2 = somar_hora(row["HORA_ENTRADA"], mao2) if mao2 else ""
+
+                        # Salvar Borracharia antes de finalizar
+                        if "BORR" in row["TIPO"].strip().upper():
+                            bd.salvar_borracharia(row["ID"], qtd_movimento, valor_borracharia)
 
                         bd.finalizar_os(
                             row["ID"],
@@ -210,118 +222,10 @@ elif menu == "OS em andamento":
 
                         st.success("OS finalizada com sucesso!")
                         st.rerun()
-    # =============================
-    # MODAL EDITAR
-    # =============================
-    if "abrir_modal_editar" in st.session_state and st.session_state["abrir_modal_editar"]:
-        st.divider()
-        st.subheader("✏️ Editar OS (Executores)")
 
-        row = st.session_state["os_editar"]
-
-        st.text_input("Placa", value=row["PLACA"], disabled=True)
-        st.text_input("Número OS", value=row["NUMERO_OS"], disabled=True)
-
-        lista_executores = ["Selecione...", "Adilso", "Fabio", "Aleson", "Jesus", "Evandro", "Dionathan",
-                            "Marcos", "Leandro", "Valdir", "Paulo", "Eduardo", "material"]
-
-        colA, colB = st.columns(2)
-
-        with colA:
-            idx1 = lista_executores.index(row["EXECUTOR1"]) if row["EXECUTOR1"] in lista_executores else 0
-            novo_exec1 = st.selectbox("Executor 1", lista_executores, index=idx1)
-
-        with colB:
-            lista_exec2 = [""] + lista_executores[1:]
-            idx2 = lista_exec2.index(row["EXECUTOR2"]) if row["EXECUTOR2"] in lista_exec2 else 0
-            novo_exec2 = st.selectbox("Executor 2", lista_exec2, index=idx2)
-
-        col_btn1, col_btn2 = st.columns(2)
-
-        with col_btn1:
-            if st.button("💾 Salvar Alterações"):
-                if novo_exec1 == "Selecione...":
-                    st.error("Selecione o Executor 1!")
-                else:
-                    bd.editar_os(row["ID"], novo_exec1, novo_exec2)
-                    st.success("Executores alterados com sucesso!")
-
-                    del st.session_state["os_editar"]
-                    st.session_state["abrir_modal_editar"] = False
-                    st.rerun()
-
-        with col_btn2:
-            if st.button("❌ Cancelar"):
-                del st.session_state["os_editar"]
-                st.session_state["abrir_modal_editar"] = False
-                st.rerun()
-
-    # =============================
-    # MODAL FINALIZAR
-    # =============================
-    if "abrir_modal_finalizar" in st.session_state and st.session_state["abrir_modal_finalizar"]:
-        st.divider()
-        st.subheader("✅ Finalizar OS")
-
-        row = st.session_state["os_finalizar"]
-
-        data_saida_padrao = datetime.now().strftime("%d/%m/%Y")
-        hora_saida_padrao = datetime.now().strftime("%H:%M")
-
-        st.text_input("Placa", value=row["PLACA"], disabled=True)
-        st.text_input("Número OS", value=row["NUMERO_OS"], disabled=True)
-        st.text_input("Data Entrada", value=row["DATA_ENTRADA"], disabled=True)
-        st.text_input("Hora Entrada", value=row["HORA_ENTRADA"], disabled=True)
-
-        col1, col2 = st.columns(2)
-        with col1:
-            data_saida = st.text_input("Data Saída", value=data_saida_padrao)
-        with col2:
-            hora_saida = st.text_input("Hora Saída", value=hora_saida_padrao)
-
-        executor1_nome = row["EXECUTOR1"]
-        executor2_nome = row["EXECUTOR2"]
-
-        mao1 = st.text_input(f"Tempo Mão de Obra - {executor1_nome} (hh:mm)")
-        mao2 = st.text_input(f"Tempo Mão de Obra - {executor2_nome} (hh:mm)")
-
-        col_btn1, col_btn2 = st.columns(2)
-
-        with col_btn1:
-            if st.button("💾 Confirmar Finalização"):
-
-                if not validar_hhmm(mao1):
-                    st.error("Tempo Executor 1 inválido. Use formato HH:MM (ex: 01:20)")
-                elif mao2 and not validar_hhmm(mao2):
-                    st.error("Tempo Executor 2 inválido. Use formato HH:MM (ex: 00:45)")
-                else:
-                    total_exec1 = somar_hora(row["HORA_ENTRADA"], mao1) if mao1 else ""
-                    total_exec2 = somar_hora(row["HORA_ENTRADA"], mao2) if mao2 else ""
-
-                    bd.finalizar_os(
-                        row["ID"],
-                        data_saida,
-                        hora_saida,
-                        mao1,
-                        mao2,
-                        total_exec1,
-                        total_exec2
-                    )
-
-                    st.success("OS finalizada com sucesso!")
-
-                    del st.session_state["os_finalizar"]
-                    st.session_state["abrir_modal_finalizar"] = False
-                    st.rerun()
-
-        with col_btn2:
-            if st.button("❌ Cancelar"):
-                del st.session_state["os_finalizar"]
-                st.session_state["abrir_modal_finalizar"] = False
-                st.rerun()
 
 # =============================
 # DASHBOARD
-# =============================
+
 elif menu == "Dashboard":
     dashboard.tela_dashboard()
